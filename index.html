@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Call with Account Code</title>
-  <!-- Charger le SDK depuis le bon chemin -->
   <script src="https://sdk-cdn.mypurecloud.com/javascript/220.0.0/purecloud-platform-client-v2.min.js"></script>
   <style>
     body {
@@ -51,10 +50,13 @@
 
     <label for="accountCode">Account Code</label>
     <select id="accountCode">
-      <option value="123#" data-ani="+33111111111">CH - Driver Desk</option>
-      <option value="456#" data-ani="+33222222222">AT - Driver Desk</option>
-      <option value="789#" data-ani="+33333333333">BE - Driver Desk</option>
+      <option value="123#" data-ani="+33185646951">CH - Driver Desk</option>
+      <option value="456#" data-ani="+33185646952">AT - Driver Desk</option>
+      <option value="789#" data-ani="+33185646953">BE - Driver Desk</option>
     </select>
+
+    <label for="ani">Caller ID (ANI)</label>
+    <input type="text" id="ani" readonly />
 
     <label for="phoneNumber">Phone Number</label>
     <input type="text" id="phoneNumber" placeholder="+33123456789" />
@@ -64,40 +66,43 @@
   </div>
 
   <script>
-  
-	const platformClient = require('platformClient');
-	
     window.addEventListener("load", async () => {
       const statusEl = document.getElementById("status");
       const callButton = document.getElementById("callButton");
+      const aniInput = document.getElementById("ani");
+      const accountSelect = document.getElementById("accountCode");
 
-      // Vérification du SDK
-      console.log("window.platformClient =", window.platformClient);
-      if (typeof platformClient === "undefined") {
+      // Mettre à jour ANI lors du changement de sélection
+      accountSelect.addEventListener("change", () => {
+        const selected = accountSelect.selectedOptions[0];
+        aniInput.value = selected.dataset.ani || "";
+      });
+      aniInput.value = accountSelect.selectedOptions[0].dataset.ani || "";
+
+      if (typeof window.platformClient === "undefined") {
         console.error("Genesys Cloud SDK is not loaded correctly.");
         statusEl.textContent = "SDK non chargé correctement.";
         return;
       }
 
-      statusEl.textContent = "SDK chargé, connexion en cours…";
-
+      const platformClient = window.platformClient;
       const client = platformClient.ApiClient.instance;
-      client.setEnvironment("mypurecloud.de");   // Adapte à ta région
+      client.setEnvironment("mypurecloud.de");
       client.setPersistSettings(true, "_my_app");
 
-      const clientId    = "53f4428f-3635-41ae-be90-042aa93763b2"; // Ton client ID
-      const redirectUri = "https://ovalo-cx.github.io/AccountCode/";   // Exactement enregistré
+      const clientId    = "53f4428f-3635-41ae-be90-042aa93763b2";
+      const redirectUri = "https://ovalo-cx.github.io/AccountCode/";
 
       try {
         await client.loginImplicitGrant(clientId, redirectUri);
         statusEl.textContent = "Authentifié avec succès ✅";
 
         const api = new platformClient.ConversationsApi();
+
         callButton.addEventListener("click", async () => {
           const number = document.getElementById("phoneNumber").value.trim();
-          const select = document.getElementById("accountCode");
-          const code   = select.value;
-          const ani    = select.selectedOptions[0].dataset.ani;
+          const code   = accountSelect.value;
+          const ani    = aniInput.value;
 
           if (!/^\+\d{6,}$/.test(number)) {
             statusEl.textContent = "Numéro invalide. Commence par +";
