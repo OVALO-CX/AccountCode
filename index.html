@@ -98,7 +98,7 @@
 
       try {
         await client.loginImplicitGrant(clientId, redirectUri);
-        statusEl.textContent = "Authentifié avec succès ✅";
+        statusEl.textContent = "Successfully authenticated ✅";
 
         const api = new platformClient.ConversationsApi();
 
