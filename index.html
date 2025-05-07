@@ -1,12 +1,8 @@
-cela fonctionne avec ce code
-
 <!DOCTYPE html>
-
 <html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <title>Call with Account Code</title>
-  <!-- Charger le SDK depuis le bon chemin -->
   <script src="https://sdk-cdn.mypurecloud.com/javascript/220.0.0/purecloud-platform-client-v2.min.js"></script>
   <style>
     body {
@@ -52,33 +48,40 @@ cela fonctionne avec ce code
   <div class="form-container">
     <h3>Place a Call</h3>
 
-```
-<label for="accountCode">Account Code</label>
-<select id="accountCode">
-  <option value="123#" data-ani="+33111111111">CH - Driver Desk</option>
-  <option value="456#" data-ani="+33222222222">AT - Driver Desk</option>
-  <option value="789#" data-ani="+33333333333">BE - Driver Desk</option>
-</select>
+    <label for="accountCode">Account Code</label>
+    <select id="accountCode">
+      <option value="123#" data-ani="+33185646951">CH - Driver Desk</option>
+      <option value="456#" data-ani="+33185646951">AT - Driver Desk</option>
+      <option value="789#" data-ani="+33185646951">BE - Driver Desk</option>
+    </select>
 
-<label for="phoneNumber">Phone Number</label>
-<input type="text" id="phoneNumber" placeholder="+33123456789" />
+    <label for="aniDisplay">ANI (readonly)</label>
+    <input type="text" id="aniDisplay" readonly />
 
-<button id="callButton">Call</button>
-<p id="status">Initialisation...</p>
-```
+    <label for="phoneNumber">Phone Number</label>
+    <input type="text" id="phoneNumber" placeholder="+33123456789" />
 
+    <button id="callButton">Call</button>
+    <p id="status">Initialisation...</p>
   </div>
 
   <script>
-  
-	const platformClient = require('platformClient');
-	
+    const platformClient = require('platformClient');
+
+    function updateAniDisplay() {
+      const select = document.getElementById("accountCode");
+      const ani = select.selectedOptions[0].dataset.ani;
+      document.getElementById("aniDisplay").value = ani;
+    }
+
     window.addEventListener("load", async () => {
       const statusEl = document.getElementById("status");
       const callButton = document.getElementById("callButton");
 
-      // Vérification du SDK
-      console.log("window.platformClient =", window.platformClient);
+      // Init display on load and on change
+      updateAniDisplay();
+      document.getElementById("accountCode").addEventListener("change", updateAniDisplay);
+
       if (typeof platformClient === "undefined") {
         console.error("Genesys Cloud SDK is not loaded correctly.");
         statusEl.textContent = "SDK non chargé correctement.";
@@ -88,22 +91,23 @@ cela fonctionne avec ce code
       statusEl.textContent = "SDK chargé, connexion en cours…";
 
       const client = platformClient.ApiClient.instance;
-      client.setEnvironment("mypurecloud.de");   // Adapte à ta région
+      client.setEnvironment("mypurecloud.de");
       client.setPersistSettings(true, "_my_app");
 
-      const clientId    = "53f4428f-3635-41ae-be90-042aa93763b2"; // Ton client ID
-      const redirectUri = "https://ovalo-cx.github.io/AccountCode/";   // Exactement enregistré
+      const clientId = "53f4428f-3635-41ae-be90-042aa93763b2";
+      const redirectUri = "https://ovalo-cx.github.io/AccountCode/";
 
       try {
         await client.loginImplicitGrant(clientId, redirectUri);
         statusEl.textContent = "Authentifié avec succès ✅";
 
         const api = new platformClient.ConversationsApi();
+
         callButton.addEventListener("click", async () => {
           const number = document.getElementById("phoneNumber").value.trim();
           const select = document.getElementById("accountCode");
-          const code   = select.value;
-          const ani    = select.selectedOptions[0].dataset.ani;
+          const code = select.value;
+          const ani = select.selectedOptions[0].dataset.ani;
 
           if (!/^\+\d{6,}$/.test(number)) {
             statusEl.textContent = "Numéro invalide. Commence par +";
@@ -111,11 +115,15 @@ cela fonctionne avec ce code
           }
 
           statusEl.textContent = "Appel en cours…";
+
           try {
             await api.postConversationsCalls({
               phoneNumber: number,
               callerId: ani,
-              participantAttributes: { accountCode: code }
+              participantAttributes: {
+                accountCode: code,
+                aniOverride: ani
+              }
             });
             statusEl.textContent = "Appel lancé avec succès ✅";
           } catch (err) {
@@ -129,6 +137,5 @@ cela fonctionne avec ce code
       }
     });
   </script>
-
 </body>
 </html>
