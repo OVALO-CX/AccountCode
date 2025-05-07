@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <title>Call with Account Code</title>
+  <!-- Charger le SDK depuis le bon chemin -->
+  <script src="https://sdk-cdn.mypurecloud.com/javascript/220.0.0/purecloud-platform-client-v2.min.js"></script>
+  <style>
+    body {
+      background: #f0f2f5;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+    }
+    .form-container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    input, select, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #0a9142;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h3>Place a Call</h3>
+
+    <label for="accountCode">Account Code</label>
+    <select id="accountCode">
+      <option value="123#" data-ani="+33111111111">CH - Driver Desk</option>
+      <option value="456#" data-ani="+33222222222">AT - Driver Desk</option>
+      <option value="789#" data-ani="+33333333333">BE - Driver Desk</option>
+    </select>
+
+    <label for="phoneNumber">Phone Number</label>
+    <input type="text" id="phoneNumber" placeholder="+33123456789" />
+
+    <button id="callButton">Call</button>
+    <p id="status">Initialisation...</p>
+  </div>
+
+  <script>
+  
+	const platformClient = require('platformClient');
+	
+    window.addEventListener("load", async () => {
+      const statusEl = document.getElementById("status");
+      const callButton = document.getElementById("callButton");
+
+      // Vérification du SDK
+      console.log("window.platformClient =", window.platformClient);
+      if (typeof platformClient === "undefined") {
+        console.error("Genesys Cloud SDK is not loaded correctly.");
+        statusEl.textContent = "SDK non chargé correctement.";
+        return;
+      }
+
+      statusEl.textContent = "SDK chargé, connexion en cours…";
+
+      const client = platformClient.ApiClient.instance;
+      client.setEnvironment("mypurecloud.de");   // Adapte à ta région
+      client.setPersistSettings(true, "_my_app");
+
+      const clientId    = "53f4428f-3635-41ae-be90-042aa93763b2"; // Ton client ID
+      const redirectUri = "https://youkiii.synology.me:6500/";   // Exactement enregistré
+
+      try {
+        await client.loginImplicitGrant(clientId, redirectUri);
+        statusEl.textContent = "Authentifié avec succès ✅";
+
+        const api = new platformClient.ConversationsApi();
+        callButton.addEventListener("click", async () => {
+          const number = document.getElementById("phoneNumber").value.trim();
+          const select = document.getElementById("accountCode");
+          const code   = select.value;
+          const ani    = select.selectedOptions[0].dataset.ani;
+
+          if (!/^\+\d{6,}$/.test(number)) {
+            statusEl.textContent = "Numéro invalide. Commence par +";
+            return;
+          }
+
+          statusEl.textContent = "Appel en cours…";
+          try {
+            await api.postConversationsCalls({
+              phoneNumber: number,
+              callerId: ani,
+              participantAttributes: { accountCode: code }
+            });
+            statusEl.textContent = "Appel lancé avec succès ✅";
+          } catch (err) {
+            console.error("Erreur appel :", err);
+            statusEl.textContent = "Erreur lors de l'appel ❌";
+          }
+        });
+      } catch (e) {
+        console.error("Erreur auth :", e);
+        statusEl.textContent = "Échec de l'authentification ❌";
+      }
+    });
+  </script>
+</body>
+</html>
