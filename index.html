@@ -55,7 +55,7 @@
       <option value="789#" data-ani="+33185646953">BE - Driver Desk - 789#</option>
     </select>
 
-    <label for="aniDisplay">ANI (readonly)</label>
+    <label for="aniDisplay">ANI displayed</label>
     <input type="text" id="aniDisplay" readonly />
 
     <label for="phoneNumber">Phone Number</label>
@@ -83,11 +83,11 @@
 
       if (typeof platformClient === "undefined") {
         console.error("Genesys Cloud SDK is not loaded correctly.");
-        statusEl.textContent = "SDK non chargé correctement.";
+        statusEl.textContent = "SDK not loaded correctly ❌";
         return;
       }
 
-      statusEl.textContent = "SDK chargé, connexion en cours…";
+      statusEl.textContent = "SDK loading ...";
 
       const client = platformClient.ApiClient.instance;
       client.setEnvironment("mypurecloud.de");
@@ -109,13 +109,13 @@
           const ani = select.selectedOptions[0].dataset.ani;
 
           if (!/^\+\d{6,}$/.test(rawNumber)) {
-            statusEl.textContent = "Numéro invalide. Commence par +";
+            statusEl.textContent = "Invalid number. Starts with +.";
             return;
           }
 
           const fullNumber = code + rawNumber;
 
-          statusEl.textContent = "Appel en cours…";
+          statusEl.textContent = "Call in progress…";
 
           try {
             await api.postConversationsCalls({
@@ -125,15 +125,15 @@
                 accountCode: code
               }
             });
-            statusEl.textContent = "Appel lancé avec succès ✅";
+            statusEl.textContent = "Call successful ✅";
           } catch (err) {
             console.error("Erreur appel :", err);
-            statusEl.textContent = "Erreur lors de l'appel ❌";
+            statusEl.textContent = "Call error ❌";
           }
         });
       } catch (e) {
         console.error("Erreur auth :", e);
-        statusEl.textContent = "Échec de l'authentification ❌";
+        statusEl.textContent = "Authentication failure ❌";
       }
     });
   </script>
