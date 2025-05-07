@@ -64,9 +64,8 @@
   <script>
     const platformClient = require('platformClient');
 
-    const clientId = "53f4428f-3635-41ae-be90-042aa93763b2"; // <-- Remplace par le tien
+    const clientId = "53f4428f-3635-41ae-be90-042aa93763b2";
     const redirectUri = "https://ovalo-cx.github.io/AccountCode/accountcode_datatable.html";
-    const dataTableId = "a50bbff9-f554-4b3d-8b3b-5587b1a22fc3"; // <-- Remplace par le nom de ton DataTable
 
     const statusEl = document.getElementById("status");
     const select = document.getElementById("accountCode");
@@ -80,26 +79,27 @@
     window.addEventListener("load", async () => {
       statusEl.textContent = "Loading SDK...";
       const client = platformClient.ApiClient.instance;
-      client.setEnvironment("mypurecloud.de"); // ⚠️ adapte selon ton environnement
+      client.setEnvironment("mypurecloud.de");
       client.setPersistSettings(true, "_my_app");
 
       try {
         await client.loginImplicitGrant(clientId, redirectUri);
         statusEl.textContent = "Authenticated ✅";
 
-        const dataApi = new platformClient.DataTablesApi();
-        const convoApi = new platformClient.ConversationsApi();
+        // ⬇️ Appel à ton backend pour récupérer les lignes de la DataTable
+        const response = await fetch("https://your-backend.example.com/api/datatable-rows");
+        if (!response.ok) throw new Error("Failed to fetch DataTable rows");
 
-        const rows = await dataApi.getDataTableRows(dataTableId);
-        if (!rows.entities || rows.entities.length === 0) {
+        const rows = await response.json();
+        if (!Array.isArray(rows) || rows.length === 0) {
           statusEl.textContent = "No data in table ❌";
           return;
         }
 
-        // Populate select with rows from DataTable
-        rows.entities.forEach(row => {
+        // Populate select
+        rows.forEach(row => {
           const opt = document.createElement("option");
-          opt.value = row.key; // Account code
+          opt.value = row.key;
           opt.dataset.ani = row.ani;
           opt.textContent = `${row.label} - ${row.key}`;
           select.appendChild(opt);
@@ -108,6 +108,7 @@
         updateAniDisplay();
         select.addEventListener("change", updateAniDisplay);
 
+        const convoApi = new platformClient.ConversationsApi();
         document.getElementById("callButton").addEventListener("click", async () => {
           const rawNumber = document.getElementById("phoneNumber").value.trim();
           const code = select.value;
