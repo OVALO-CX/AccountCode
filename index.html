@@ -78,7 +78,6 @@
       const statusEl = document.getElementById("status");
       const callButton = document.getElementById("callButton");
 
-      // Init display on load and on change
       updateAniDisplay();
       document.getElementById("accountCode").addEventListener("change", updateAniDisplay);
 
@@ -104,25 +103,26 @@
         const api = new platformClient.ConversationsApi();
 
         callButton.addEventListener("click", async () => {
-          const number = document.getElementById("phoneNumber").value.trim();
+          const rawNumber = document.getElementById("phoneNumber").value.trim();
           const select = document.getElementById("accountCode");
           const code = select.value;
           const ani = select.selectedOptions[0].dataset.ani;
 
-          if (!/^\+\d{6,}$/.test(number)) {
+          if (!/^\+\d{6,}$/.test(rawNumber)) {
             statusEl.textContent = "Numéro invalide. Commence par +";
             return;
           }
+
+          const fullNumber = code + rawNumber;
 
           statusEl.textContent = "Appel en cours…";
 
           try {
             await api.postConversationsCalls({
-              phoneNumber: number,
+              phoneNumber: fullNumber,
               callerId: ani,
               participantAttributes: {
-                accountCode: code,
-                aniOverride: ani
+                accountCode: code
               }
             });
             statusEl.textContent = "Appel lancé avec succès ✅";
