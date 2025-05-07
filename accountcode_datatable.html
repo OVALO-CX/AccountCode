@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Call with DataTable</title>
+  <script src="https://sdk-cdn.mypurecloud.com/javascript/220.0.0/purecloud-platform-client-v2.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+
+    .container {
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    input, select, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #0a9142;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>Call with DataTable</h3>
+
+    <label for="accountCodeSelect">Select Account Code</label>
+    <select id="accountCodeSelect"></select>
+
+    <label for="aniDisplay">ANI (readonly)</label>
+    <input type="text" id="aniDisplay" readonly />
+
+    <label for="phoneNumber">Phone Number</label>
+    <input type="text" id="phoneNumber" placeholder="+33123456789" />
+
+    <button id="callButton">Call</button>
+    <p id="status">Loading...</p>
+  </div>
+
+  <script type="module">
+    import platformClient from 'https://sdk-cdn.mypurecloud.com/javascript/220.0.0/purecloud-platform-client-v2.min.js';
+
+    const client = platformClient.ApiClient.instance;
+    client.setEnvironment("mypurecloud.de"); // Change based on your region
+    client.setPersistSettings(true, "_my_app");
+
+    const clientId = "53f4428f-3635-41ae-be90-042aa93763b2"; 
+    const redirectUri = "https://ovalo-cx.github.io/AccountCode/accountcode_datatable.html";
+    const datatableId = "a50bbff9-f554-4b3d-8b3b-5587b1a22fc3"; // Replace with your Data Table ID
+
+    const statusEl = document.getElementById("status");
+    const callButton = document.getElementById("callButton");
+    const selectEl = document.getElementById("accountCodeSelect");
+    const aniDisplay = document.getElementById("aniDisplay");
+
+    async function main() {
+      try {
+        statusEl.textContent = "Authenticating...";
+        await client.loginImplicitGrant(clientId, redirectUri);
+        statusEl.textContent = "Authenticated ✅";
+
+        const architectApi = new platformClient.ArchitectApi();
+
+        // Load Data Table
+        statusEl.textContent = "Loading data table...";
+        const response = await architectApi.getFlowsDatatableRows(datatableId, {
+          pageSize: 100,
+          pageNumber: 1,
+          showbrief: true
+        });
+
+        const rows = response.entities;
+        if (rows.length === 0) {
+          statusEl.textContent = "No rows found in DataTable.";
+          return;
+        }
+
+        // Populate dropdown
+        rows.forEach(row => {
+          const option = document.createElement("option");
+          option.value = row.code;
+          option.textContent = `${row.label} (${row.ani})`;
+          option.dataset.ani = row.ani;
+          selectEl.appendChild(option);
+        });
+
+        // Initial ANI display
+        updateAni();
+
+        selectEl.addEventListener("change", updateAni);
+
+        callButton.addEventListener("click", async () => {
+          const phoneNumber = document.getElementById("phoneNumber").value.trim();
+          const selectedOption = selectEl.selectedOptions[0];
+          const code = selectedOption.value;
+          const ani = selectedOption.dataset.ani;
+
+          if (!/^\+\d{6,}$/.test(phoneNumber)) {
+            statusEl.textContent = "Invalid phone number (must start with +).";
+            return;
+          }
+
+          const conversationsApi = new platformClient.ConversationsApi();
+          const fullNumber = code + phoneNumber;
+
+          statusEl.textContent = "Calling...";
+
+          try {
+            await conversationsApi.postConversationsCalls({
+              phoneNumber: fullNumber,
+              callerId: ani,
+              participantAttributes: {
+                accountCode: code
+              }
+            });
+            statusEl.textContent = "Call placed successfully ✅";
+          } catch (err) {
+            console.error("Call error:", err);
+            statusEl.textContent = "Error placing call ❌";
+          }
+        });
+
+      } catch (error) {
+        console.error("Auth or data table load error:", error);
+        statusEl.textContent = "Initialization error ❌";
+      }
+    }
+
+    function updateAni() {
+      const ani = selectEl.selectedOptions[0].dataset.ani;
+      aniDisplay.value = ani;
+    }
+
+    main();
+  </script>
+</body>
+</html>
