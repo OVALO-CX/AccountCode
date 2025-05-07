@@ -62,7 +62,7 @@
     <input type="text" id="phoneNumber" placeholder="+33123456789" />
 
     <button id="callButton">Call</button>
-    <p id="status">Initialisation...</p>
+    <p id="status"><span id="statusIcon">🔄</span> <span id="statusText">Initialisation...</span></p>
   </div>
 
   <script>
@@ -74,8 +74,12 @@
       document.getElementById("aniDisplay").value = ani;
     }
 
+    function setStatus(icon, text) {
+      document.getElementById("statusIcon").textContent = icon;
+      document.getElementById("statusText").textContent = text;
+    }
+
     window.addEventListener("load", async () => {
-      const statusEl = document.getElementById("status");
       const callButton = document.getElementById("callButton");
 
       updateAniDisplay();
@@ -83,11 +87,11 @@
 
       if (typeof platformClient === "undefined") {
         console.error("Genesys Cloud SDK is not loaded correctly.");
-        statusEl.textContent = "SDK not loaded correctly ❌";
+        setStatus("❌", "SDK not loaded correctly");
         return;
       }
 
-      statusEl.textContent = "SDK loading ...";
+      setStatus("🔄", "SDK loading...");
 
       const client = platformClient.ApiClient.instance;
       client.setEnvironment("mypurecloud.de");
@@ -98,7 +102,7 @@
 
       try {
         await client.loginImplicitGrant(clientId, redirectUri);
-        statusEl.textContent = "Successfully authenticated ✅";
+        setStatus("✅", "Successfully authenticated");
 
         const api = new platformClient.ConversationsApi();
 
@@ -109,13 +113,13 @@
           const ani = select.selectedOptions[0].dataset.ani;
 
           if (!/^\+\d{6,}$/.test(rawNumber)) {
-            statusEl.textContent = "Invalid number. Starts with +.";
+            setStatus("❌", "Invalid number. Starts with +.");
             return;
           }
 
           const fullNumber = code + rawNumber;
 
-          statusEl.textContent = "Call in progress…";
+          setStatus("🔄", "Call in progress…");
 
           try {
             await api.postConversationsCalls({
@@ -125,15 +129,15 @@
                 accountCode: code
               }
             });
-            statusEl.textContent = "Call successful ✅";
+            setStatus("✅", "Call successful");
           } catch (err) {
-            console.error("Erreur appel :", err);
-            statusEl.textContent = "Call error ❌";
+            console.error("Call error:", err);
+            setStatus("❌", "Call error");
           }
         });
       } catch (e) {
-        console.error("Erreur auth :", e);
-        statusEl.textContent = "Authentication failure ❌";
+        console.error("Auth error:", e);
+        setStatus("❌", "Authentication failure");
       }
     });
   </script>
