@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Call with Account Code</title>
-  <!-- Charger le SDK depuis le bon chemin -->
   <script src="https://sdk-cdn.mypurecloud.com/javascript/220.0.0/purecloud-platform-client-v2.min.js"></script>
   <style>
     body {
@@ -51,10 +50,13 @@
 
     <label for="accountCode">Account Code</label>
     <select id="accountCode">
-      <option value="123#" data-ani="+33111111111">CH - Driver Desk</option>
-      <option value="456#" data-ani="+33222222222">AT - Driver Desk</option>
-      <option value="789#" data-ani="+33333333333">BE - Driver Desk</option>
+      <option value="123#" data-ani="+33185646951">CH - Driver Desk</option>
+      <option value="456#" data-ani="+33185646952">AT - Driver Desk</option>
+      <option value="789#" data-ani="+33185646953">BE - Driver Desk</option>
     </select>
+
+    <label for="aniNumber">ANI Number (readonly)</label>
+    <input type="text" id="aniNumber" readonly />
 
     <label for="phoneNumber">Phone Number</label>
     <input type="text" id="phoneNumber" placeholder="+33123456789" />
@@ -64,14 +66,23 @@
   </div>
 
   <script>
-    
-    const platformClient = require('platformClient');
+    // Initialiser le champ ANI à l'ouverture
+    function updateAniField() {
+      const select = document.getElementById("accountCode");
+      const ani = select.selectedOptions[0].dataset.ani;
+      document.getElementById("aniNumber").value = ani;
+    }
+
+    // Met à jour ANI à chaque changement
+    document.getElementById("accountCode").addEventListener("change", updateAniField);
+    window.addEventListener("DOMContentLoaded", updateAniField);
+
+    const platformClient = window.platformClient;
+
     window.addEventListener("load", async () => {
       const statusEl = document.getElementById("status");
       const callButton = document.getElementById("callButton");
 
-      // Vérification du SDK
-      console.log("window.platformClient =", window.platformClient);
       if (typeof platformClient === "undefined") {
         console.error("Genesys Cloud SDK is not loaded correctly.");
         statusEl.textContent = "SDK non chargé correctement.";
@@ -81,22 +92,23 @@
       statusEl.textContent = "SDK chargé, connexion en cours…";
 
       const client = platformClient.ApiClient.instance;
-      client.setEnvironment("mypurecloud.de");   // Adapte à ta région
+      client.setEnvironment("mypurecloud.de"); // Remplace par ta région
       client.setPersistSettings(true, "_my_app");
 
-      const clientId    = "53f4428f-3635-41ae-be90-042aa93763b2"; // Ton client ID
-      const redirectUri = "https://youkiii.synology.me:6500/";   // Exactement enregistré
+      const clientId = "53f4428f-3635-41ae-be90-042aa93763b2";
+      const redirectUri = "https://youkiii.synology.me:6500/";
 
       try {
         await client.loginImplicitGrant(clientId, redirectUri);
         statusEl.textContent = "Authentifié avec succès ✅";
 
         const api = new platformClient.ConversationsApi();
+
         callButton.addEventListener("click", async () => {
           const number = document.getElementById("phoneNumber").value.trim();
           const select = document.getElementById("accountCode");
-          const code   = select.value;
-          const ani    = select.selectedOptions[0].dataset.ani;
+          const code = select.value;
+          const ani = select.selectedOptions[0].dataset.ani;
 
           if (!/^\+\d{6,}$/.test(number)) {
             statusEl.textContent = "Numéro invalide. Commence par +";
@@ -104,11 +116,15 @@
           }
 
           statusEl.textContent = "Appel en cours…";
+
           try {
             await api.postConversationsCalls({
               phoneNumber: number,
-              callerId: ani,
-              participantAttributes: { accountCode: code }
+              callerId: ani, // Optionnel selon ta config Genesys
+              participantAttributes: {
+                accountCode: code,
+                aniOverride: ani
+              }
             });
             statusEl.textContent = "Appel lancé avec succès ✅";
           } catch (err) {
@@ -116,6 +132,7 @@
             statusEl.textContent = "Erreur lors de l'appel ❌";
           }
         });
+
       } catch (e) {
         console.error("Erreur auth :", e);
         statusEl.textContent = "Échec de l'authentification ❌";
